@@ -124,8 +124,42 @@ if (empty($boards)) {
 echo count($boards) . " boards to backup... \n";
 
 // 5) Backup now!
+
+// list of switches in original code:
+// actions=all
+// actions_limit=1000
+// cards=all
+// card_attachment_fields=all
+// lists=all
+// members=all
+// member_fields=all
+// checklists=all
+// fields=all
+
+$board_url_options_list = array(
+    'actions=all',
+    'action_fields=all',
+    'actions_limit=1000',
+    'cards=all',
+    'card_fields=all',
+    'card_attachments=true',
+    'card_attachment_fields=all',
+    'checklists=all',
+    'checklist_fields=all',
+    'fields=all',
+    'labels=all',
+    'lists=all',
+    'list_fields=all',
+    'members=all',
+    'member_fields=all',
+);
+$board_url_options = implode('&', $board_url_options_list);
+
 foreach ($boards as $id => $board) {
-    $url_individual_board_json = "https://api.trello.com/1/boards/$id?actions=all&actions_limit=1000&card_attachment_fields=all&cards=all&lists=all&members=all&member_fields=all&card_attachment_fields=all&checklists=all&fields=all&key=$key&token=$application_token";
+
+    $url_individual_board_json = "https://api.trello.com/1/boards/$id?key=$key&token=$application_token&$board_url_options";
+    // echo $url_individual_board_json;
+
     $dirname = getPathToStoreBackups($path, $board, $filename_append_datetime);
     
     if(!file_exists($path)) {
@@ -149,6 +183,46 @@ foreach ($boards as $id => $board) {
     }
 
     // 5a) Backup the attachments
+
+    // {
+    //"bytes":3489399,
+    //"date":"2021-01-14T08:11:57.926Z",
+    //"edgeColor":null,
+    //"idMember":"5cdb27dfec23cb891d39d17e",
+    //"isUpload":true,
+    //"mimeType":"application/pdf",
+    //"name":"18.12.2020 Мультивендорный маркетплейс одежды.pdf",
+    //"previews":[],
+    //"url":"https://trello.com/1/cards/5ffffc629232266e80d98018/attachments/5ffffccdc25df03c199f4e81/download/18.12.2020_%D0%9C%D1%83%D0%BB%D1%8C%D1%82%D0%B8%D0%B2%D0%B5%D0%BD%D0%B4%D0%BE%D1%80%D0%BD%D1%8B%D0%B9_%D0%BC%D0%B0%D1%80%D0%BA%D0%B5%D1%82%D0%BF%D0%BB%D0%B5%D0%B9%D1%81_%D0%BE%D0%B4%D0%B5%D0%B6%D0%B4%D1%8B.pdf",
+    //"pos":16384,
+    //"fileName":"18.12.2020_%D0%9C%D1%83%D0%BB%D1%8C%D1%82%D0%B8%D0%B2%D0%B5%D0%BD%D0%B4%D0%BE%D1%80%D0%BD%D1%8B%D0%B9_%D0%BC%D0%B0%D1%80%D0%BA%D0%B5%D1%82%D0%BF%D0%BB%D0%B5%D0%B9%D1%81_%D0%BE%D0%B4%D0%B5%D0%B6%D0%B4%D1%8B.pdf",
+    //"id":"5ffffccdc25df03c199f4e81"
+    //}
+
+    if($backup_attachments_from_cards) {
+        $attachments_dir_checked = false;
+        $trelloObject = json_decode($response);
+        foreach ($trelloObject->cards as $card) {
+            foreach ($card->attachments as $attachment) {
+                if ($attachment->isUpload) {
+                    if (!$attachments_dir_checked) {
+                        if (!file_exists($dirname)) {
+                            mkdir($dirname, 0777, true);
+                        }
+                        $attachments_dir_checked = true;
+                    }
+                    $url = $attachment->url;
+                    $filename = $attachment->id . '-' . urldecode($attachment->fileName);
+                    // TODO: move $attachment->id before file extention
+                    // $filename = urldecode($attachment->fileName) . '-' . $attachment->id;
+                    $pathForAttachment = $dirname . '/' . $filename; //sanitize_file_name($filename);
+                    file_put_contents($pathForAttachment, file_get_contents($url, false, $attachmentsCtx));
+                    // TODO: compare $attachment->bytes with downloaded file size
+                }
+            }
+        }
+    }
+
     if($backup_attachments) {
         $trelloObject = json_decode($response);
         $attachments = array();

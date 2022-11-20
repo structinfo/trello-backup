@@ -17,7 +17,7 @@ $backup_all_organization_boards = false;
 $backup_attachments = false;
 
 // Where to store the backup files (by default, trello boards JSON files will be stored in this directory)
-$path = dirname(__FILE__);
+$path = dirname(__FILE__) . '/backup-' . date("Y-m-d");
 
 // HTTP proxy, if one is required, in the format 'host:port', e.g. 'proxy.example.com:80' or '192.168.1.254:8080'
 $proxy= '';
